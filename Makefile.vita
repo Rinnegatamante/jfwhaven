@@ -1,0 +1,123 @@
+TARGET		:= jfwhaven
+TITLE		:= WITCHAVEN
+
+LIBS = -lvitaGL -lvitashark -lmathneon -lvorbisfile -lvorbis -logg  -lspeexdsp -lmpg123 \
+	-lSDL2 -lc -lSceCommonDialog_stub -lSceAudio_stub -lSceLibKernel_stub -lSceShaccCg_stub \
+	-lSceNet_stub -lSceNetCtl_stub -lpng -lSceDisplay_stub -lSceGxm_stub -lSceHid_stub \
+	-lSceSysmodule_stub -lSceCtrl_stub -lSceTouch_stub -lSceMotion_stub -lm -lSceAppMgr_stub \
+	-lSceAppUtil_stub -lScePgf_stub -ljpeg -lSceRtc_stub -lScePower_stub -lcurl -lssl -lcrypto -lz
+
+# build locations
+SRC=src
+EINC=$(EROOT)/include
+ELIB=$(EROOT)
+
+#engine
+EROOT ?= jfbuild
+ESRC ?= $(EROOT)/src
+
+MACTROOT ?= jfmact
+AUDIOSRC = jfaudiolib/src
+
+JFBUILDOBJS = \
+	$(ESRC)/a-c.o \
+  	$(ESRC)/asmprot.o \
+	$(ESRC)/baselayer.o \
+	$(ESRC)/cache1d.o \
+	$(ESRC)/compat.o \
+	$(ESRC)/crc32.o \
+	$(ESRC)/defs.o \
+	$(ESRC)/engine.o \
+	$(ESRC)/kplib.o \
+	$(ESRC)/osd.o \
+	$(ESRC)/polymost.o \
+	$(ESRC)/glbuild.o \
+	$(ESRC)/hightile.o \
+	$(ESRC)/mdsprite.o \
+	$(ESRC)/polymosttex.o \
+	$(ESRC)/polymosttexcache.o \
+	$(ESRC)/pragmas.o \
+	$(ESRC)/scriptfile.o \
+	$(ESRC)/sdlayer2.o \
+	$(ESRC)/textfont.o \
+	$(ESRC)/smalltextfont.o \
+	$(ESRC)/mmulti_null.o \
+	$(ESRC)/version.o
+
+JFAUDIOLIBOBJS= \
+	$(AUDIOSRC)/drivers.o \
+	$(AUDIOSRC)/fx_man.o \
+	$(AUDIOSRC)/cd.o \
+	$(AUDIOSRC)/multivoc.o \
+	$(AUDIOSRC)/mix.o \
+	$(AUDIOSRC)/mixst.o \
+	$(AUDIOSRC)/pitch.o \
+	$(AUDIOSRC)/vorbis.o \
+	$(AUDIOSRC)/music.o \
+	$(AUDIOSRC)/midi.o \
+	$(AUDIOSRC)/driver_sdl.o \
+	$(AUDIOSRC)/driver_nosound.o \
+	$(AUDIOSRC)/asssys.o
+
+GAMEOBJS = \
+	$(SRC)/b5compat.o \
+	$(SRC)/config.o \
+	$(SRC)/whani.o \
+	$(SRC)/whaven.o \
+	$(SRC)/whfx.o \
+	$(SRC)/whinp.o \
+	$(SRC)/whmenu.o \
+	$(SRC)/whnet.o \
+	$(SRC)/whobj.o \
+	$(SRC)/whplr.o \
+	$(SRC)/whsndmod.o \
+	$(SRC)/whtag.o
+
+OBJS     := $(GAMEOBJS) $(JFBUILDOBJS) $(JFAUDIOLIBOBJS)
+
+PREFIX  = arm-vita-eabi
+CC      = $(PREFIX)-gcc
+CXX      = $(PREFIX)-g++
+CFLAGS  = -fsigned-char -Wl,-q,--wrap,fopen,--wrap,opendir,--wrap,open,--wrap,access \
+	-O3 -g -fno-optimize-sibling-calls -DUSE_POLYMOST -DUSE_OPENGL=USE_GLES2\
+	-ffast-math -mtune=cortex-a9 -mfpu=neon -DHAVE_VORBIS -Isrc \
+	-Ijfbuild/include -Ijfaudiolib/include -DVITA -DHAVE_SDL \
+	-Wno-implicit-function-declaration -I$(VITASDK)/$(PREFIX)/include/SDL2
+	
+ifeq ($(WANTON),1)
+CFLAGS += -DWANTON
+endif
+
+CXXFLAGS  = $(CFLAGS) -fno-exceptions -std=gnu++11
+ASFLAGS = $(CFLAGS)
+
+ifeq ($(WANTON),1)
+all: $(TARGET).bin
+
+$(TARGET).bin: $(TARGET).velf
+	vita-make-fself -c -s $< build/$(TARGET).bin
+else
+all: $(TARGET).vpk
+
+$(TARGET).vpk: $(TARGET).velf
+	vita-make-fself -c -s $< build/eboot.bin
+	vita-mksfoex -s TITLE_ID=$(TITLE) -d ATTRIBUTE2=12 "Witchaven" param.sfo
+	vita-pack-vpk -s param.sfo -b build/eboot.bin \
+		--add build/sce_sys/icon0.png=sce_sys/icon0.png \
+		--add build/sce_sys/livearea/contents/bg.png=sce_sys/livearea/contents/bg.png \
+		--add build/sce_sys/livearea/contents/startup.png=sce_sys/livearea/contents/startup.png \
+		--add build/sce_sys/livearea/contents/wanton.png=sce_sys/livearea/contents/wanton.png \
+		--add build/sce_sys/livearea/contents/template.xml=sce_sys/livearea/contents/template.xml \
+		$(TARGET).vpk
+endif
+
+%.velf: %.elf
+	cp $< $<.unstripped.elf
+	$(PREFIX)-strip -g $<
+	vita-elf-create $< $@
+
+$(TARGET).elf: $(OBJS)
+	$(CXX) $(CXXFLAGS) $^ $(LIBS) -o $@
+
+clean:
+	@rm -rf $(TARGET).velf $(TARGET).elf $(OBJS) $(TARGET).elf.unstripped.elf $(TARGET).vpk build/eboot.bin ./param.sfo

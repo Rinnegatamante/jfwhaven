@@ -1,6 +1,0 @@
-[submodule "jfbuild"]
-	path = jfbuild
-	url = ../jfbuild.git
-[submodule "jfaudiolib"]
-	path = jfaudiolib
-	url = ../jfaudiolib.git

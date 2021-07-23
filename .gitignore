@@ -1,3 +1,7 @@
+*.elf
+*.velf
+*.sfo
+*.vpk
 *.o
 *.obj
 *.a

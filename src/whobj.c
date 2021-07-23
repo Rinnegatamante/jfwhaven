@@ -33,7 +33,7 @@ extern int currentpotion;
 short torchpattern[38] = { 2,2,2,3,3,3,4,4,5,5,6,6,4,4,6,6,4,4,6,6,4,4,6,6,4,4,6,6,5,5,4,4,3,3,3,2,2,2 };
 
 char flashflag=0x00;
-char tempbuf[50];
+static char tempbuf[50];
 char displaybuf[50];
 char scorebuf[50];
 char healthbuf[50];

@@ -76,7 +76,7 @@ short jcalibration=0,
 	 jmovespeed=16,
 	 joyx,joyy,
 	 joykeys[4],
-	 jstickenabled=0,
+	 jstickenabled=1,
 	 jturnspeed=16;
 
 short mousekeys[2];
@@ -116,7 +116,7 @@ void
 initjstick(void)
 {
 	 jcalibration=1;
-	 jstickenabled=0;
+	 jstickenabled=1;
 	 if (option2[3] == 0) {
 		  option2[3]=KEYFIRE;
 	 }

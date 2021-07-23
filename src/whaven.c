@@ -10,6 +10,63 @@
 #include "startwin.h"
 #include "version.h"
 
+int nextvoxid = 0;
+
+#ifdef VITA
+#include <dirent.h>
+
+char patched_fname[512];
+char *patch_fname(char *fname) {
+	if (strstr(fname, "ux0")) {
+		char *s = strstr(fname, ".");
+		if (s)
+			fname = s;
+		else
+			return fname;
+	}
+	
+	if (fname[0] == '.') {
+		char *s = strstr(fname, "/");
+		if (s)
+			fname = s + 1;
+		else
+			fname++;
+	}
+	sprintf(patched_fname, "ux0:data/jfwhaven/%s", fname);
+	return patched_fname;
+}
+
+int __wrap_access(const char *fname, int mode) {
+	return __real_access(patch_fname(fname), mode);
+}
+
+FILE *__wrap_fopen(char *fname, char *mode) {
+	return __real_fopen(patch_fname(fname), mode);
+}
+
+int __wrap_open(const char *fname, int mode) {
+	return __real_open(patch_fname(fname), mode);
+}
+
+DIR *__wrap_opendir(const char *fname) {
+	return __real_opendir(patch_fname(fname));
+}
+
+#define MAX_CURDIR_PATH 512
+char cur_dir[MAX_CURDIR_PATH] = "ux0:data/jfwhaven/";
+
+char *Bgetcwd(char *buf, bsize_t size)
+{
+	if (buf != NULL) {
+        strncpy(buf, cur_dir, size);
+    }
+    return cur_dir;
+}
+int chdir(const char *path) {
+    return 0;
+}
+#endif
+
 int *animateptr[MAXANIMATES],
       animategoal[MAXANIMATES],
       animatevel[MAXANIMATES],
@@ -1141,7 +1198,7 @@ int app_main(int argc,const char * const argv[]) {
     // "portable" by writing into the working directory
     if (access("user_profiles_disabled", F_OK) == 0) {
         char cwd[BMAX_PATH+1];
-        if (getcwd(cwd, sizeof(cwd))) {
+        if (Bgetcwd(cwd, sizeof(cwd))) {
             addsearchpath(cwd);
         }
     } else {
@@ -1158,7 +1215,7 @@ int app_main(int argc,const char * const argv[]) {
             Bsnprintf(dirpath, sizeof(dirpath), "%s/%s", supportdir, confdir);
             asperr = addsearchpath(dirpath);
             if (asperr == -2) {
-                if (Bmkdir(dirpath, S_IRWXU) == 0) {
+                if (sceIoMkdir(dirpath, 0777) == 0) {
                     asperr = addsearchpath(dirpath);
                 } else {
                     asperr = -1;
@@ -1174,10 +1231,10 @@ int app_main(int argc,const char * const argv[]) {
     buildsetlogfile("whaven.log");
 
     wm_setapptitle("JFWitchaven");
-    buildprintf("\nJFWitchaven\n"
+    /*buildprintf("\nJFWitchaven\n"
         "Based on WITCHAVEN Copyright (C) 1995 IntraCorp, Inc.\n"
         "Version %s.\nBuilt %s %s.\n",
-      game_version, game_date, game_time);
+      game_version, game_date, game_time);*/
 
     if (preinitengine()) {
         wm_msgbox("Build Engine Initialisation Error",
@@ -1412,7 +1469,6 @@ void playloop(void) {
         animatetags(plr);
         doanimations((int)synctics);
         dodelayitems((int)synctics);
-
     }
 
 
